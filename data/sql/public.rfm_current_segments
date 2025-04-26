@@ -1,0 +1,81 @@
+-- =============================================
+-- View: public.rfm_current_segments
+-- Purpose: Calculate current RFM segments for each customer
+--          based on the last 6 months of activity from a fixed reference date
+-- =============================================
+
+CREATE OR REPLACE VIEW public.rfm_current_segments AS
+
+WITH
+-- 🔹 Parameter for reference date
+params AS (
+    SELECT DATE '2024-06-01' AS today
+),
+
+-- 🔹 Filter orders up to today
+filtered_orders AS (
+    SELECT
+        o.order_id,
+        o.customer_id,
+        o.order_date,
+        o.amount
+    FROM orders o
+    JOIN params p ON o.order_date <= p.today
+),
+
+-- 🔹 Aggregate RFM metrics from last 6 months only
+rfm_current_raw AS (
+    SELECT
+        o.customer_id,
+        MAX(o.order_date) AS last_order_date,
+        COUNT(o.order_id) AS frequency,
+        SUM(o.amount) AS monetary,
+        DATE_PART('day', AGE(MAX(p.today)::timestamp, MAX(o.order_date)::timestamp)) AS recency
+    FROM filtered_orders o
+    CROSS JOIN params p
+    WHERE o.order_date >= (p.today - INTERVAL '6 months')
+    GROUP BY o.customer_id
+),
+
+-- 🔹 Score customers into RFM tiles and generate RFM code
+rfm_scored AS (
+    SELECT
+        *,
+        NTILE(3) OVER (ORDER BY recency)        AS r_score,
+        NTILE(3) OVER (ORDER BY frequency DESC) AS f_score,
+        NTILE(3) OVER (ORDER BY monetary DESC)  AS m_score
+    FROM rfm_current_raw
+),
+
+-- 🔹 Final structure with segment labels
+rfm_final AS (
+    SELECT
+        r.customer_id,
+        p.today AS snapshot_date,
+        'current'::text AS segment_type,
+        r.recency,
+        r.frequency,
+        r.monetary,
+        r.r_score,
+        r.f_score,
+        r.m_score,
+        CONCAT(r.r_score, r.f_score, r.m_score) AS rfm_code
+    FROM rfm_scored r
+    CROSS JOIN params p
+)
+
+-- 🔹 Output: join with predefined segment labels
+SELECT
+    rf.customer_id,
+    rf.snapshot_date,
+    rf.segment_type,
+    rf.rfm_code,
+    rf.recency,
+    rf.frequency,
+    rf.monetary,
+    rf.r_score,
+    rf.f_score,
+    rf.m_score,
+    sd.segment
+FROM rfm_final rf
+LEFT JOIN segment_definitions sd ON rf.rfm_code = sd.rfm_code;
