@@ -27,19 +27,16 @@ This project demonstrates how to implement and visualize customer segmentation u
 
 ```
 ├── data/
-│   └── orders.csv                      # Synthetic dataset
-│
+│   ├── orders.csv                     # Synthetic dataset
+│   └── segment_definitions.csv        # Segment label mapping
 ├── sql/
 │   ├── customer_cohort_quarterly.sql  # Assigns cohort per customer
 │   ├── rfm_current_segments.sql       # Calculates current RFM segments
 │   ├── rfm_historical_segments.sql    # Calculates historical RFM segments
-│   └── segment_definitions.sql        # Segment label mapping
 │
 ├── python/
-│   └── rfm_voxel_plot.py              # Custom matplotlib 3D visualization
+│   └── rfm_voxel_plot.py              # Custom matplotlib visualization for PowerBI
 │
-├── powerbi/
-│   └── rfm_cohort_dashboard.pbix      # Power BI dashboard (optional)
 │
 └── README.md
 ```
