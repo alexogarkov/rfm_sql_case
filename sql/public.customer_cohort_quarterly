@@ -1,0 +1,18 @@
+-- =============================================
+-- View: public.customer_cohort_quarterly
+-- Purpose: Assigns each customer to the quarter of their first purchase.
+--          Provides both a timestamp and a formatted cohort label.
+-- =============================================
+
+CREATE OR REPLACE VIEW public.customer_cohort_quarterly AS
+SELECT
+    customer_id,
+
+    -- The start of the quarter when the customer made their first purchase
+    DATE_TRUNC('quarter', MIN(order_date)) AS cohort_start_date,
+
+    -- A formatted label like "2024q1_Cohort" for use in reporting and visualizations
+    TO_CHAR(DATE_TRUNC('quarter', MIN(order_date)), 'YYYY"q"Q') || '_Cohort' AS cohort_label
+
+FROM orders
+GROUP BY customer_id;
